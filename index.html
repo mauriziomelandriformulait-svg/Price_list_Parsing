@@ -1,0 +1,760 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sage X3 - Price List Parsing & Structuring</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Source Sans 3',sans-serif;color:#1E1E1E;background:#EDEEEE}
+a{color:#00693C;text-decoration:underline}a:hover{color:#004A2A}
+.w{background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.18);padding:12px 12px 14px;min-width:0}
+.wt{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.wt h2{margin:0;font-size:16px;font-weight:600;display:flex;align-items:center;gap:8px}
+.ic{color:#222;letter-spacing:4px;cursor:pointer}
+.sc{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:12.5px;min-width:300px}
+th{background:#2B5675;color:#fff;text-align:left;font-weight:600;padding:7px 8px;border-right:1px solid #fff}
+td{padding:6px 8px}
+tbody tr:nth-child(even){background:#EEF2F0}
+.n{text-align:right}
+.tab{padding:0 11px;height:36px;display:flex;align-items:center;font-size:13px;font-weight:600;color:#222;white-space:nowrap;border:0;background:none;font-family:inherit;cursor:pointer}
+.on{background:#fff;border-bottom:3px solid #00693C}
+.bt{height:30px;padding:0 12px;border:1px solid #C9D0CC;background:#fff;font:600 13px 'Source Sans 3',sans-serif;color:#2B5675;cursor:pointer;border-radius:2px}
+.bt:hover{background:#F5F7F6}
+.g{background:#00693C;color:#fff;border-color:#00693C}
+.g:hover{background:#004A2A}
+.kp{background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.18);padding:12px 14px;border-radius:3px}
+.kl{font-size:12.5px;font-weight:600;color:#4A5551}
+.kv{font-size:26px;font-weight:700;margin:2px 0 4px;color:#1E1E1E}
+.s{font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:3px;white-space:nowrap;display:inline-block}
+.ok{background:#D6EEDD;color:#0A4F27}.wr{background:#FBE0BD;color:#7A3A05}.in{background:#D9E5F2;color:#1D4468}.danger{background:#FDE8E8;color:#9B1C1C}
+
+:focus-visible{outline:2px solid #00693C;outline-offset:2px}
+button{cursor:pointer}
+@media (max-width:640px){.kv{font-size:22px}}
+
+/* Stepper Fisso in Alto (Sticky Header) con Check Marks */
+.stepper-container{position:sticky;top:0;z-index:100;background:#EDEEEE;padding:10px 18px 6px;box-shadow:0 2px 5px rgba(0,0,0,.08)}
+.stepper{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;max-width:1500px;margin:0 auto}
+.step-item{flex:1;min-width:110px;background:#E2E8E5;padding:8px 10px;border-radius:3px;font-size:12px;font-weight:600;color:#4A5551;border-left:3px solid #B0B8B4;display:flex;align-items:center;gap:6px}
+.step-item.active{background:#fff;border-left-color:#00693C;color:#00693C;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.step-item.done{border-left-color:#00693C;color:#0A4F27;background:#EBF6EE}
+.step-check{display:none;color:#00693C;font-weight:700;font-size:13px}
+.step-item.done .step-check{display:inline}
+
+/* Modale */
+dialog{border:0;padding:0;width:min(1100px,94vw);max-height:88vh;box-shadow:0 8px 30px rgba(0,0,0,.35);font-family:'Source Sans 3',sans-serif;color:#1E1E1E;border-radius:4px}
+dialog::backdrop{background:rgba(20,20,20,.5)}
+.dh2{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #D5D8D6;background:#F8FAF9}
+.dh2 h2{margin:0;font-size:18px;font-weight:600;color:#2B5675}
+.db{padding:14px 16px;overflow:auto;max-height:calc(88vh - 70px)}
+.mn{color:#9A3412;font-weight:700}
+.az{background:#D6EEDD;color:#0A4F27;font-weight:600;border-left:3px solid #00693C}
+.nt{font-size:12.5px;color:#4A5551;margin:0 0 10px}
+
+/* Area Upload Essenziale */
+.upload-box{border:2px dashed #C9D0CC;background:#F8FAF9;padding:28px 18px;text-align:center;border-radius:4px;cursor:pointer;transition:border-color 0.2s}
+.upload-box:hover{border-color:#00693C;background:#F0F7F4}
+
+/* Badge & Console Logs */
+.console-box{background:#1B1B1B;color:#00FF66;font-family:monospace;font-size:11.5px;padding:10px 12px;border-radius:3px;height:120px;overflow-y:auto;line-height:1.4}
+.card-highlight{background:#F0F7F4;border:1px solid #00693C;padding:10px 12px;border-radius:3px;margin-bottom:12px}
+.note-box{display:none;background:#FFFBEB;border:1px solid #FCD34D;border-left:4px solid #F59E0B;padding:10px 12px;border-radius:3px;font-size:12.5px;color:#78350F;margin-top:0}
+
+/* Header Fisso per Tabella ERP (Sticky Headers a 2 Livelli) */
+.sticky-th-lvl1 {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.sticky-th-lvl2 {
+  position: sticky;
+  top: 31px; /* Altezza precisa del primo livello th */
+  z-index: 9;
+}
+
+/* Loader CSS Animato */
+.spinner{display:inline-block;width:18px;height:18px;border:3px solid rgba(0,105,60,0.2);border-radius:50%;border-top-color:#00693C;animation:spin 0.8s ease-in-out infinite;vertical-align:middle;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Evidenziazione nuova riga inserita */
+@keyframes highlightRow {
+  0% { background-color: #D6EEDD; }
+  100% { background-color: transparent; }
+}
+.row-animated { animation: highlightRow 0.6s ease-out; }
+
+/* Sezioni a comparsa */
+#sec-3-erp{display:none}
+#go-action-container{display:none}
+#rest-of-dashboard{display:none}
+</style>
+</head>
+<body>
+
+<div style="background:#1B1B1B;color:#fff;height:42px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;font-size:12.5px;font-weight:600;gap:12px;overflow:hidden">
+<div style="display:flex;gap:22px;align-items:center"><span style="color:#00D639;font-size:26px;font-weight:700;letter-spacing:-.5px">Sage</span><b style="font-size:16px">X3</b></div>
+<div style="display:flex;gap:24px;white-space:nowrap"><span>Operations Manager</span><span>[Utente]</span><span>[Cartella POC Amaltia]</span></div>
+</div>
+
+<div style="background:#fff;padding:20px 18px 12px;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:8px">
+<div>
+  <h1 style="margin:0;font-size:28px;font-weight:700">Price List Parsing & Structuring</h1>
+</div>
+<span style="display:flex;gap:8px;padding-bottom:4px"><button class="bt" id="btn-reset">Reset Demo</button><button class="bt g" id="btn-run-all">Esegui Workflow Completo</button></span>
+</div>
+
+<div style="background:#fff;padding:12px 12px 0;display:flex;overflow-x:auto;border-bottom:1px solid #D5D8D6">
+<button class="tab">Processi ERP</button><button class="tab">To Do List</button><button class="tab">Monitor Acquisti</button><button class="tab on">Agente Listini AI</button><button class="tab">Audit & Log</button><button class="tab">+</button>
+</div>
+
+<!-- Stepper Fisso in Alto (Sticky Header) con Check Marks -->
+<div class="stepper-container">
+  <div class="stepper" id="stepper-bar">
+    <div class="step-item active" id="st-1"><span class="step-check">✓</span> <span>1 Upload & parsing</span></div>
+    <div class="step-item" id="st-2"><span class="step-check">✓</span> <span>2 Estrazione</span></div>
+    <div class="step-item" id="st-3"><span class="step-check">✓</span> <span>3 Dati ERP</span></div>
+    <div class="step-item" id="st-4"><span class="step-check">✓</span> <span>4 Confronto</span></div>
+    <div class="step-item" id="st-5"><span class="step-check">✓</span> <span>5 Impatto</span></div>
+    <div class="step-item" id="st-6"><span class="step-check">✓</span> <span>6 Decisioni</span></div>
+    <div class="step-item" id="st-7"><span class="step-check">✓</span> <span>7 Esecuzione</span></div>
+  </div>
+</div>
+
+<div style="padding:14px;display:flex;flex-direction:column;gap:14px;max-width:1500px;margin:0 auto">
+
+<!-- 1 - Upload & Parsing -->
+<div class="w">
+  <div class="wt"><h2>1 - Upload & Parsing</h2><span class="ic">⚙</span></div>
+  
+  <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;align-items:start">
+    
+    <!-- Sinistra: Input caricamento file -->
+    <div>
+      <div class="upload-box" id="drop-zone">
+        <div style="font-size:28px;margin-bottom:4px">📄</div>
+        <div style="font-size:14px;font-weight:700;color:#2B5675">upload file</div>
+        <input type="file" id="file-input" multiple style="display:none">
+      </div>
+    </div>
+
+    <!-- Destra: Tabella Stato Ingestione -->
+    <div class="sc">
+      <table>
+        <thead>
+          <tr>
+            <th>File Ingestion</th>
+            <th>Tipo / Source</th>
+            <th>log</th>
+            <th>Stato</th>
+          </tr>
+        </thead>
+        <tbody id="tbl-ingestion">
+          <tr id="empty-row">
+            <td colspan="4" style="text-align:center;color:#888;padding:20px;font-style:italic">
+              waiting for upload
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<!-- 2 - Estrazione -->
+<div class="w">
+  <div class="wt">
+    <h2>2 - Estrazione</h2>
+    <span class="ic">⛶</span>
+  </div>
+  
+  <div style="display:grid;grid-template-columns:3fr 1fr;gap:16px;align-items:start">
+    
+    <!-- Tabella Dati Estratti -->
+    <div class="sc" style="max-height:350px;overflow-y:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>Codice</th>
+            <th>Descrizione</th>
+            <th>UDM</th>
+            <th class="n">EUR / UDM</th>
+          </tr>
+        </thead>
+        <tbody id="tbl-estrazione">
+          <tr id="empty-ext-row">
+            <td colspan="4" style="text-align:center;color:#888;padding:20px;font-style:italic">
+              waiting for upload
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Riquadro Note Listino -->
+    <div>
+      <div class="note-box" id="box-note-listino">
+        <b style="display:block;margin-bottom:4px;font-size:13px">📌 Note listino</b>
+        <ul style="margin:0;padding-left:16px;line-height:1.4">
+          <li><b>Revisione:</b> 01 (Emissione: 01/10/2026)</li>
+          <li><b>Validità:</b> 01/01/2027 - 31/12/2027</li>
+          <li><b>Condizioni:</b> Prezzi unitari netti in EUR, IVA esclusa, no sconti, trasporto escluso.</li>
+          <li style="margin-top:6px;color:#B91C1C"><b>Avviso PKG-016:</b> Quotato per <code>CONF100</code> (confezione da 100 etichette). Tutte le altre righe sono quotate per 1 PZ o 1 KG.</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- 3 - Dati ERP -->
+<div class="w" id="sec-3-erp">
+  <div class="wt">
+    <h2>3 - Dati ERP <span style="font-size:12px;font-weight:normal;color:#666;margin-left:8px">ERP - Contesto aziendale</span></h2>
+    <span class="ic">⚙</span>
+  </div>
+
+  <div style="display:grid;grid-template-columns:3.2fr 1fr;gap:16px;align-items:start">
+    
+    <!-- Colonna Sinistra: Badges + Tabella Anagrafica ERP e Listino con Header a 2 livelli FISSI (Sticky) -->
+    <div>
+      <!-- Badges Informativi ERP -->
+      <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+        <span class="s ok" style="font-size:12px;padding:4px 10px"><b>28</b> Codici trovati</span>
+        <span class="s danger" style="font-size:12px;padding:4px 10px"><b>2</b> Codici non trovati</span>
+        <span class="s wr" style="font-size:12px;padding:4px 10px"><b>1</b> Unità da verificare</span>
+      </div>
+      
+      <p style="font-size:12px;color:#555;margin:0 0 10px">
+        Abbinamento per fornitore ALFA + codice articolo. Famiglie, volumi ERP e valori del nuovo listino sincronizzati.
+      </p>
+
+      <!-- Tabella con Intestazione a 2 Livelli con Sticky Header -->
+      <div class="sc" id="scroll-erp-box" style="max-height:350px;overflow-y:auto;position:relative">
+        <table>
+          <thead>
+            <!-- Livello 1: ERP (#2B5675) e Listino (#1D4468) FISSI -->
+            <tr>
+              <th colspan="5" class="sticky-th-lvl1" style="background:#2B5675;text-align:center;font-size:13px;font-weight:700;letter-spacing:0.5px;border-bottom:1px solid rgba(255,255,255,0.3)">ERP</th>
+              <th colspan="3" class="sticky-th-lvl1" style="background:#1D4468;text-align:center;font-size:13px;font-weight:700;letter-spacing:0.5px;border-bottom:1px solid rgba(255,255,255,0.3);border-left:2px solid #fff">Listino</th>
+            </tr>
+            <!-- Livello 2: Colonne di dettaglio FISSE -->
+            <tr>
+              <th class="sticky-th-lvl2" style="background:#2B5675">Codice</th>
+              <th class="sticky-th-lvl2" style="background:#2B5675">Famiglia</th>
+              <th class="sticky-th-lvl2" style="background:#2B5675">UDM</th>
+              <th class="n sticky-th-lvl2" style="background:#2B5675">Prezzo EUR</th>
+              <th class="n sticky-th-lvl2" style="background:#2B5675">Q.tà 2027</th>
+              <th class="sticky-th-lvl2" style="background:#1D4468;border-left:2px solid #fff">Codice</th>
+              <th class="sticky-th-lvl2" style="background:#1D4468">UDM</th>
+              <th class="n sticky-th-lvl2" style="background:#1D4468">Prezzo EUR</th>
+            </tr>
+          </thead>
+          <tbody id="tbl-erp">
+            <tr>
+              <td colspan="8" style="text-align:center;color:#888;padding:20px;font-style:italic">
+                waiting for upload
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Colonna Destra: Riquadro Gestione Eccezioni -->
+    <div>
+      <div class="note-box" id="box-eccezioni-erp" style="background:#FDE8E8;border-color:#F87171;border-left-color:#DC2626;color:#991B1B">
+        <b style="display:block;margin-bottom:6px;font-size:13px;color:#7F1D1D">⚠️ Gestione delle eccezioni</b>
+        <ul style="margin:0;padding-left:16px;line-height:1.4;font-size:12px">
+          <li style="margin-bottom:6px"><b>NEW-001</b> e <b>NEW-002</b> non sono presenti in anagrafica ERP.</li>
+          <li><b>PKG-016</b> usa unità diverse (EUR/PZ in ERP vs CONF100 in PDF): il prezzo va normalizzato solo dopo conferma del buyer.</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Pulsante GO per Esecuzione Analisi e Pubblicazione Dashboard -->
+<div class="w" id="go-action-container" style="text-align:center;background:#F0F7F4;border:1px solid #00693C;padding:16px">
+  <div style="font-size:14px;font-weight:600;color:#2B5675;margin-bottom:8px">
+    Dati estratti e anagrafica ERP allineati. Pronto per il calcolo degli impatti e la generazione delle proposte.
+  </div>
+  <button class="bt g" id="btn-go" style="height:40px;padding:0 30px;font-size:15px;font-weight:700;letter-spacing:0.5px">
+    🚀 GO - Calcola Impatti e Decisioni
+  </button>
+</div>
+
+<!-- RESTO DEL DASHBOARD (Pubblicato dopo aver premuto GO) -->
+<div id="rest-of-dashboard">
+
+  <!-- 5 - SEZIONE IMPATTO (KPI, FOCUS & SINTESI PER FAMIGLIA) -->
+  <div class="w" style="border-top:3px solid #00693C">
+    <div class="wt">
+      <h2>5 - Impatto Economico e Analisi Volumi</h2>
+      <span class="ic">⛶</span>
+    </div>
+
+    <!-- Schede KPI Impatto -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px">
+      <div class="kp" style="border:1px solid #E2E8E5"><div class="kl">Impatto Netto Annuo</div><div class="kv" id="kpi-netto">+126.000 €</div><span class="s wr" id="kpi-netto-tag">Baseline ufficiale</span></div>
+      <div class="kp" style="border:1px solid #E2E8E5"><div class="kl">Extra costi lordi</div><div class="kv" style="color:#B91C1C">+133.000 €</div><span class="s wr">10 aumenti</span></div>
+      <div class="kp" style="border:1px solid #E2E8E5"><div class="kl">Risparmi annui</div><div class="kv" style="color:#0A4F27">-7.000 €</div><span class="s ok">3 riduzioni</span></div>
+      <div class="kp" style="border:1px solid #E2E8E5"><div class="kl">Media Ponderata</div><div class="kv" id="kpi-pond">4,27%</div><span class="s in">Spesa: € 2.951.500</span></div>
+      <div class="kp" style="border:1px solid #E2E8E5"><div class="kl">Media Semplice</div><div class="kv">2,17%</div><span class="s in">Su 27 articoli</span></div>
+    </div>
+
+    <!-- Layout a 2 colonne: Focus articolo + Sintesi Famiglie ERP -->
+    <div style="display:grid;grid-template-columns:1fr 1.5fr;gap:16px;align-items:start">
+      
+      <!-- Left: Scheda Focus -->
+      <div style="background:#F8FAF9;border:1px solid #C9D0CC;border-left:4px solid #00693C;padding:12px;border-radius:3px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <b style="color:#00693C;font-size:14px">Focus Impatto: Articolo MAT-001</b>
+          <span class="s wr">Aumento +12,5%</span>
+        </div>
+        <div style="font-size:13px;line-height:1.4;color:#333">
+          L'articolo <b>MAT-001</b> passa da <b>5,20 EUR/KG</b> a <b>5,85 EUR/KG</b>.<br>
+          Su un forecast di <b>80.000 KG</b>, genera un impatto di <b style="color:#B91C1C">+52.000,00 EUR/anno</b>.
+          <div style="margin-top:8px;background:#EEF2F0;padding:8px;border-radius:3px;font-size:12px;color:#2B5675">
+            📊 Rappresenta il <b>41,27%</b> dell'impatto netto totale e la famiglia <b>Polimeri</b> assorbe <b>+91.000 EUR</b> (72,22% del netto).
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Tabelle Sintesi per Famiglia ERP -->
+      <div class="sc">
+        <b style="display:block;margin-bottom:6px;font-size:13px;color:#2B5675">Sintesi Impatto per Famiglia ERP</b>
+        <table>
+          <thead>
+            <tr><th>Famiglia ERP</th><th class="n">Variati / Confrontabili</th><th class="n">Media Semplice</th><th class="n">Impatto EUR</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><b>Polimeri</b></td><td class="n">5 / 7</td><td class="n" style="color:#B91C1C">7,79%</td><td class="n"><b>+91.000,00 €</b></td></tr>
+            <tr><td><b>Elettronica</b></td><td class="n">3 / 7</td><td class="n">1,71%</td><td class="n">+28.000,00 €</td></tr>
+            <tr><td><b>Packaging</b></td><td class="n">3 / 6</td><td class="n" style="color:#0A4F27">-2,17%</td><td class="n">-7.000,00 €</td></tr>
+            <tr><td><b>Meccanica</b></td><td class="n">2 / 7</td><td class="n">0,71%</td><td class="n">+14.000,00 €</td></tr>
+          </tbody>
+          <tfoot>
+            <tr style="background:#D9E5F2;font-weight:700">
+              <td>Totale Baseline (27 art.)</td>
+              <td class="n">13 / 27</td>
+              <td class="n">2,17%</td>
+              <td class="n" id="sum-impatto">+126.000,00 €</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Layout a 2 Colonne per Anomalie e Azioni -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:14px">
+
+    <!-- Gestione Anomalie -->
+    <div class="w">
+      <div class="wt"><h2>Anomalie Intenzionali Rilevate (3)</h2><span class="s wr">Richiede intervento</span></div>
+      <div class="sc">
+        <table>
+          <thead><tr><th>Codice</th><th>Tipo Anomalia</th><th>Descrizione</th><th>Azione Suggerita</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code>NEW-001</code> / <code>NEW-002</code></td>
+              <td><span class="s danger">Non trovati in ERP</span></td>
+              <td>Nuovi articoli o alias sconosciuti</td>
+              <td>Richiedere censimento al Buyer</td>
+            </tr>
+            <tr>
+              <td><code>PKG-016</code></td>
+              <td><span class="s wr">Mismatch UDM / CONF</span></td>
+              <td>0,12 €/PZ vs 11 €/CONF100 (+9.066%)</td>
+              <td><button class="bt g" id="btn-fix-pkg" style="height:24px;padding:0 6px;font-size:11px">Normalizza a 100 PZ</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="pkg-status-msg" style="display:none;margin-top:8px" class="card-highlight">
+        <b>Ramo Opzionale Attivato:</b> Confermato confezionamento 100 PZ per PKG-016. Prezzo normalizzato: 0,11 €/PZ (-8,33%). Impatto: -2.000 €/anno su 200k PZ. Nuovo Impatto Netto: <b>+124.000,00 EUR</b>.
+      </div>
+    </div>
+
+    <!-- Matrice Azioni Proposte -->
+    <div class="w">
+      <div class="wt"><h2>Azioni e Proposte Agentiche</h2><span class="ic">⚙</span></div>
+      <div class="sc">
+        <table>
+          <thead><tr><th>Tipologia Azione</th><th>Target / Articoli</th><th>Stato</th><th>Azione Workflow</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><b>Negoziazione Fornitore</b><br><small>Aumento &gt;8% e Impatto &gt;=5k €</small></td>
+              <td>5 articoli Polimeri<br><code>MAT-001..MAT-005</code></td>
+              <td><span class="s wr">In sospeso</span></td>
+              <td><button class="bt" id="open-dlg-supplier">Bozza Lettera</button></td>
+            </tr>
+            <tr>
+              <td><b>Aggiornamento ERP</b><br><small>Decorrenza 01/01/2027</small></td>
+              <td>8 articoli<br><small>ELE-101..103, PKG-010..012, MEC-201..202</small></td>
+              <td><span class="s in">DA_APPROVARE</span></td>
+              <td><button class="bt g" id="btn-approve-erp">Approva (8)</button></td>
+            </tr>
+            <tr>
+              <td><b>Pacchetto Finance</b><br><small>Riepilogo Impatto e Budget</small></td>
+              <td>Report Interno Management</td>
+              <td><span class="s ok">Pronto</span></td>
+              <td><button class="bt" id="open-dlg-finance">Vedi Bozza</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- CONSOLE LOG AGENTICA (Spostata in fondo alla pagina) -->
+  <div class="w">
+    <div class="wt"><h2>Execution Console Agentica</h2><span class="ic">⟳</span></div>
+    <div class="console-box" id="console-log">
+      <span style="color:#888">[SYSTEM] In attesa del comando GO...</span>
+    </div>
+  </div>
+
+</div>
+
+</div>
+
+<!-- Dialog / Modal Bozza Comunicazioni -->
+<dialog id="dlg-comm">
+  <div class="dh2">
+    <h2 id="dlg-title">Bozza Comunicazione Agente</h2>
+    <button class="bt" id="close-dlg" type="button">Chiudi</button>
+  </div>
+  <div class="db">
+    <div style="margin-bottom:10px">
+      <b>Oggetto:</b> <span id="dlg-subject" style="color:#2B5675;font-weight:600"></span>
+    </div>
+    <div style="background:#F5F7F6;border:1px solid #C9D0CC;padding:12px;border-radius:3px;white-space:pre-wrap;font-family:inherit;font-size:13px;line-height:1.5" id="dlg-body">
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <button class="bt" type="button" id="btn-copy">Copia Testo</button>
+      <button class="bt g" type="button" onclick="alert('Inviato con successo!');document.getElementById('dlg-comm').close();">Conferma e Invia</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+(function(){
+  // Dataset di 30 righe del listino ALFA 2027
+  var listinoAlfa2027 = [
+    {cod: "MAT-001", desc: "Resina ABS grado stampaggio", udm: "KG", eur: "5,85"},
+    {cod: "MAT-002", desc: "Resina PP copolimero", udm: "KG", eur: "6,60"},
+    {cod: "MAT-003", desc: "Granulo PE-HD naturale", udm: "KG", eur: "4,40"},
+    {cod: "MAT-004", desc: "Resina PA6 rinforzata", udm: "KG", eur: "5,60"},
+    {cod: "MAT-005", desc: "Resina PC trasparente", udm: "KG", eur: "8,80"},
+    {cod: "MAT-006", desc: "Masterbatch nero", udm: "KG", eur: "3,00"},
+    {cod: "MAT-007", desc: "Elastomero 60A", udm: "KG", eur: "7,00"},
+    {cod: "ELE-101", desc: "Alimentatore 24V 60W", udm: "PZ", eur: "20,80"},
+    {cod: "ELE-102", desc: "Sensore induttivo M12", udm: "PZ", eur: "41,60"},
+    {cod: "ELE-103", desc: "Relè industriale 24V", udm: "PZ", eur: "10,40"},
+    {cod: "ELE-104", desc: "Connettore 4 poli", udm: "PZ", eur: "2,50"},
+    {cod: "ELE-105", desc: "Cavo schermato 2 metri", udm: "PZ", eur: "4,00"},
+    {cod: "ELE-106", desc: "Scheda controllo base", udm: "PZ", eur: "65,00"},
+    {cod: "ELE-107", desc: "Interruttore finecorsa", udm: "PZ", eur: "8,00"},
+    {cod: "PKG-010", desc: "Scatola cartone 40x30", udm: "PZ", eur: "0,96"},
+    {cod: "PKG-011", desc: "Vassoio protettivo", udm: "PZ", eur: "1,90"},
+    {cod: "PKG-012", desc: "Sacchetto protettivo", udm: "PZ", eur: "0,48"},
+    {cod: "PKG-013", desc: "Film estensibile bobina", udm: "PZ", eur: "9,00"},
+    {cod: "PKG-014", desc: "Nastro adesivo rotolo", udm: "PZ", eur: "1,80"},
+    {cod: "PKG-015", desc: "Pallet standard", udm: "PZ", eur: "12,00"},
+    {cod: "PKG-016", desc: "Etichetta adesiva 100x50", udm: "CONF100", eur: "11,00"},
+    {cod: "MEC-201", desc: "Staffa zincata", udm: "PZ", eur: "10,30"},
+    {cod: "MEC-202", desc: "Boccola acciaio", udm: "PZ", eur: "5,10"},
+    {cod: "MEC-203", desc: "Vite M8x30", udm: "PZ", eur: "0,20"},
+    {cod: "MEC-204", desc: "Rondella M8", udm: "PZ", eur: "0,05"},
+    {cod: "MEC-205", desc: "Cuscinetto 6202", udm: "PZ", eur: "3,50"},
+    {cod: "MEC-206", desc: "Piastra alluminio", udm: "PZ", eur: "18,00"},
+    {cod: "MEC-207", desc: "Distanziale 20 mm", udm: "PZ", eur: "1,20"},
+    {cod: "NEW-001", desc: "Resina ABS riciclata", udm: "KG", eur: "4,90"},
+    {cod: "NEW-002", desc: "Sensore temperatura PT100", udm: "PZ", eur: "22,00"}
+  ];
+
+  // Dataset Completo ERP + Listino Incorporato (30 righe)
+  var combinedData = [
+    {codErp:"MAT-001", fam:"Polimeri", udmErp:"KG", eurErp:"5,20", qta:"80.000", codLst:"MAT-001", udmLst:"KG", eurLst:"5,85"},
+    {codErp:"MAT-002", fam:"Polimeri", udmErp:"KG", eurErp:"6,00", qta:"20.000", codLst:"MAT-002", udmLst:"KG", eurLst:"6,60"},
+    {codErp:"MAT-003", fam:"Polimeri", udmErp:"KG", eurErp:"4,00", qta:"25.000", codLst:"MAT-003", udmLst:"KG", eurLst:"4,40"},
+    {codErp:"MAT-004", fam:"Polimeri", udmErp:"KG", eurErp:"5,00", qta:"15.000", codLst:"MAT-004", udmLst:"KG", eurLst:"5,60"},
+    {codErp:"MAT-005", fam:"Polimeri", udmErp:"KG", eurErp:"8,00", qta:"10.000", codLst:"MAT-005", udmLst:"KG", eurLst:"8,80"},
+    {codErp:"MAT-006", fam:"Polimeri", udmErp:"KG", eurErp:"3,00", qta:"20.000", codLst:"MAT-006", udmLst:"KG", eurLst:"3,00"},
+    {codErp:"MAT-007", fam:"Polimeri", udmErp:"KG", eurErp:"7,00", qta:"10.000", codLst:"MAT-007", udmLst:"KG", eurLst:"7,00"},
+    {codErp:"ELE-101", fam:"Elettronica", udmErp:"PZ", eurErp:"20,00", qta:"20.000", codLst:"ELE-101", udmLst:"PZ", eurLst:"20,80"},
+    {codErp:"ELE-102", fam:"Elettronica", udmErp:"PZ", eurErp:"40,00", qta:"5.000", codLst:"ELE-102", udmLst:"PZ", eurLst:"41,60"},
+    {codErp:"ELE-103", fam:"Elettronica", udmErp:"PZ", eurErp:"10,00", qta:"10.000", codLst:"ELE-103", udmLst:"PZ", eurLst:"10,40"},
+    {codErp:"ELE-104", fam:"Elettronica", udmErp:"PZ", eurErp:"2,50", qta:"20.000", codLst:"ELE-104", udmLst:"PZ", eurLst:"2,50"},
+    {codErp:"ELE-105", fam:"Elettronica", udmErp:"PZ", eurErp:"4,00", qta:"10.000", codLst:"ELE-105", udmLst:"PZ", eurLst:"4,00"},
+    {codErp:"ELE-106", fam:"Elettronica", udmErp:"PZ", eurErp:"65,00", qta:"2.000", codLst:"ELE-106", udmLst:"PZ", eurLst:"65,00"},
+    {codErp:"ELE-107", fam:"Elettronica", udmErp:"PZ", eurErp:"8,00", qta:"5.000", codLst:"ELE-107", udmLst:"PZ", eurLst:"8,00"},
+    {codErp:"PKG-010", fam:"Packaging", udmErp:"PZ", eurErp:"1,00", qta:"100.000", codLst:"PKG-010", udmLst:"PZ", eurLst:"0,96"},
+    {codErp:"PKG-011", fam:"Packaging", udmErp:"PZ", eurErp:"2,00", qta:"20.000", codLst:"PKG-011", udmLst:"PZ", eurLst:"1,90"},
+    {codErp:"PKG-012", fam:"Packaging", udmErp:"PZ", eurErp:"0,50", qta:"50.000", codLst:"PKG-012", udmLst:"PZ", eurLst:"0,48"},
+    {codErp:"PKG-013", fam:"Packaging", udmErp:"PZ", eurErp:"9,00", qta:"4.000", codLst:"PKG-013", udmLst:"PZ", eurLst:"9,00"},
+    {codErp:"PKG-014", fam:"Packaging", udmErp:"PZ", eurErp:"1,80", qta:"10.000", codLst:"PKG-014", udmLst:"PZ", eurLst:"1,80"},
+    {codErp:"PKG-015", fam:"Packaging", udmErp:"PZ", eurErp:"12,00", qta:"3.000", codLst:"PKG-015", udmLst:"PZ", eurLst:"12,00"},
+    {codErp:"PKG-016", fam:"Packaging", udmErp:"PZ", eurErp:"0,12", qta:"200.000", codLst:"PKG-016", udmLst:"CONF100", eurLst:"11,00"},
+    {codErp:"MEC-201", fam:"Meccanica", udmErp:"PZ", eurErp:"10,00", qta:"30.000", codLst:"MEC-201", udmLst:"PZ", eurLst:"10,30"},
+    {codErp:"MEC-202", fam:"Meccanica", udmErp:"PZ", eurErp:"5,00", qta:"50.000", codLst:"MEC-202", udmLst:"PZ", eurLst:"5,10"},
+    {codErp:"MEC-203", fam:"Meccanica", udmErp:"PZ", eurErp:"0,20", qta:"300.000", codLst:"MEC-203", udmLst:"PZ", eurLst:"0,20"},
+    {codErp:"MEC-204", fam:"Meccanica", udmErp:"PZ", eurErp:"0,05", qta:"300.000", codLst:"MEC-204", udmLst:"PZ", eurLst:"0,05"},
+    {codErp:"MEC-205", fam:"Meccanica", udmErp:"PZ", eurErp:"3,50", qta:"15.000", codLst:"MEC-205", udmLst:"PZ", eurLst:"3,50"},
+    {codErp:"MEC-206", fam:"Meccanica", udmErp:"PZ", eurErp:"18,00", qta:"5.000", codLst:"MEC-206", udmLst:"PZ", eurLst:"18,00"},
+    {codErp:"MEC-207", fam:"Meccanica", udmErp:"PZ", eurErp:"1,20", qta:"40.000", codLst:"MEC-207", udmLst:"PZ", eurLst:"1,20"},
+    {codErp:"NEW-001", fam:"Non trovato", udmErp:"—", eurErp:"—", qta:"—", codLst:"NEW-001", udmLst:"KG", eurLst:"4,90"},
+    {codErp:"NEW-002", fam:"Non trovato", udmErp:"—", eurErp:"—", qta:"—", codLst:"NEW-002", udmLst:"PZ", eurLst:"22,00"}
+  ];
+
+  // Testi Bozze
+  var bozzaFinance = {
+    subject: "Listino ALFA 2027 - impatto previsto e azioni",
+    body: "Il confronto sui 27 articoli omogenei stima +126.000 EUR/anno a volumi costanti, derivanti da +133.000 EUR di aumenti e -7.000 EUR di riduzioni. I Polimeri pesano +91.000 EUR; MAT-001 da solo +52.000 EUR.\n\nProponiamo negoziazione su cinque articoli, otto aggiornamenti previa approvazione e verifica di tre anomalie. L'impatto non comprende i codici assenti dall'ERP e PKG-016, la cui UDM va confermata."
+  };
+
+  var bozzaFornitore = {
+    subject: "Richiesta confronto condizioni listino 2027",
+    body: "Abbiamo esaminato il listino con decorrenza 01/01/2027. Gli articoli MAT-001, MAT-002, MAT-003, MAT-004 e MAT-005 presentano aumenti dal 10% al 12,5%.\n\nPrima di confermare le nuove condizioni chiediamo un confronto sulle motivazioni degli aumenti e sulle possibilità di mantenere le condizioni attuali o valutare un accordo legato ai volumi. Chiediamo inoltre conferma del confezionamento da 100 pezzi di PKG-016. Restiamo in attesa di un vostro riscontro."
+  };
+
+  var dlg = document.getElementById('dlg-comm');
+  var dlgTitle = document.getElementById('dlg-title');
+  var dlgSubject = document.getElementById('dlg-subject');
+  var dlgBody = document.getElementById('dlg-body');
+
+  document.getElementById('open-dlg-finance').addEventListener('click', function(){
+    dlgTitle.textContent = "Pacchetto Finance - Bozza Interna";
+    dlgSubject.textContent = bozzaFinance.subject;
+    dlgBody.textContent = bozzaFinance.body;
+    dlg.showModal();
+  });
+
+  document.getElementById('open-dlg-supplier').addEventListener('click', function(){
+    dlgTitle.textContent = "Fornitore ALFA - Bozza di Negoziazione";
+    dlgSubject.textContent = bozzaFornitore.subject;
+    dlgBody.textContent = bozzaFornitore.body;
+    dlg.showModal();
+  });
+
+  document.getElementById('close-dlg').addEventListener('click', function(){
+    dlg.close();
+  });
+
+  // Gestione Drop Zone & File Input Click
+  var dropZone = document.getElementById('drop-zone');
+  var fileInput = document.getElementById('file-input');
+
+  dropZone.addEventListener('click', function(){
+    fileInput.click();
+  });
+
+  fileInput.addEventListener('change', function(){
+    if(fileInput.files.length > 0){
+      triggerFileUpload();
+    }
+  });
+
+  // Funzione Principale di Caricamento
+  var fileLoaded = false;
+  function triggerFileUpload(){
+    if(fileLoaded) return;
+    fileLoaded = true;
+
+    // 1. Inserisce SOLO LA RIGA RELATIVA A listino_fornitore_alfa_2027.pdf nella tabella File Ingestion
+    var tbodyIng = document.getElementById('tbl-ingestion');
+    tbodyIng.innerHTML = `
+      <tr>
+        <td><code>listino_fornitore_alfa_2027.pdf</code></td>
+        <td>PDF Nativo</td>
+        <td>Caricato. Avvio estrazione tabellare...</td>
+        <td><span class="s ok">Caricato</span></td>
+      </tr>
+    `;
+
+    // Aggiorna Stepper
+    document.getElementById('st-1').className = "step-item done";
+    document.getElementById('st-2').className = "step-item active";
+
+    // Mostra LOADER ANIMATO nella Sezione 2 - Estrazione
+    var tbodyExt = document.getElementById('tbl-estrazione');
+    tbodyExt.innerHTML = `
+      <tr>
+        <td colspan="4" style="text-align:center;color:#00693C;padding:25px;font-weight:600;font-size:13px">
+          <span class="spinner"></span> Estrazione e parsing delle 30 righe in corso...
+        </td>
+      </tr>
+    `;
+
+    // 2. Popola Sezione 2 - Estrazione
+    setTimeout(function(){
+      tbodyExt.innerHTML = listinoAlfa2027.map(function(r){
+        var isAnom = r.cod === 'PKG-016' ? ' style="background:#FBE0BD"' : '';
+        return '<tr'+isAnom+'><td><code>'+r.cod+'</code></td><td>'+r.desc+'</td><td><b>'+r.udm+'</b></td><td class="n"><b>'+r.eur+' €</b></td></tr>';
+      }).join('');
+
+      // Mostra le Note listino dello Step 2
+      document.getElementById('box-note-listino').style.display = 'block';
+      document.getElementById('st-2').className = "step-item done";
+      document.getElementById('st-3').className = "step-item active";
+
+      // 3. MOSTRA LA SEZIONE 3 con LOADER INIZIALE
+      document.getElementById('sec-3-erp').style.display = 'block';
+      var tbodyErp = document.getElementById('tbl-erp');
+      tbodyErp.innerHTML = `
+        <tr>
+          <td colspan="8" style="text-align:center;color:#2B5675;padding:25px;font-weight:600;font-size:13px">
+            <span class="spinner"></span> Connessione DB ERP in corso... Avvio popolamento dati...
+          </td>
+        </tr>
+      `;
+
+      document.getElementById('sec-3-erp').scrollIntoView({ behavior: 'smooth' });
+
+      // 4. Inizia l'inserimento RIGA PER RIGA dei dati ERP + Listino
+      setTimeout(function(){
+        tbodyErp.innerHTML = ''; // Pulisce il loader
+        var rowIndex = 0;
+        var scrollBox = document.getElementById('scroll-erp-box');
+
+        var rowInterval = setInterval(function(){
+          if(rowIndex < combinedData.length){
+            var r = combinedData[rowIndex];
+            var rowStyle = '';
+            if(r.fam === 'Non trovato') rowStyle = ' background:#FDE8E8;color:#991B1B';
+            else if(r.codErp === 'PKG-016') rowStyle = ' background:#FBE0BD';
+
+            var tr = document.createElement('tr');
+            tr.className = 'row-animated';
+            if(rowStyle) tr.style.cssText = rowStyle;
+
+            tr.innerHTML = `
+              <td><code>${r.codErp}</code></td>
+              <td>${r.fam}</td>
+              <td><b>${r.udmErp}</b></td>
+              <td class="n"><b>${r.eurErp}${r.eurErp !== '—' ? ' €' : ''}</b></td>
+              <td class="n">${r.qta}</td>
+              <td style="border-left:2px solid #C9D0CC"><code>${r.codLst}</code></td>
+              <td><b>${r.udmLst}</b></td>
+              <td class="n"><b>${r.eurLst} €</b></td>
+            `;
+
+            tbodyErp.appendChild(tr);
+            scrollBox.scrollTop = scrollBox.scrollHeight; // Autoscroll
+            rowIndex++;
+          } else {
+            clearInterval(rowInterval);
+
+            // Mostra il pulsante GO e il box delle eccezioni al termine
+            document.getElementById('go-action-container').style.display = 'block';
+            document.getElementById('box-eccezioni-erp').style.display = 'block';
+
+            // Aggiorna lo Stepper al passo 3 e 4 completati
+            document.getElementById('st-3').className = "step-item done";
+            document.getElementById('st-4').className = "step-item done";
+          }
+        }, 80);
+
+      }, 800);
+
+    }, 2500);
+  }
+
+  // GESTIONE PULSANTE "GO" (Pubblica il resto della dashboard e completa lo Stepper 5, 6 e 7)
+  document.getElementById('btn-go').addEventListener('click', function(){
+    if(!fileLoaded){
+      alert("Carica prima i file di input per avviare il calcolo.");
+      return;
+    }
+    
+    // Mostra le sezioni rimanenti
+    document.getElementById('rest-of-dashboard').style.display = 'block';
+    
+    // Metti la spunta in alto sugli step 5, 6 e 7
+    document.getElementById('st-5').className = "step-item done";
+    document.getElementById('st-6').className = "step-item done";
+    document.getElementById('st-7').className = "step-item done";
+
+    // Disabilita pulsante GO
+    this.disabled = true;
+    this.style.opacity = "0.6";
+    this.innerHTML = "✅ Analisi Calcolata e Pubblicata";
+
+    // Popola Log Console
+    var consoleBox = document.getElementById('console-log');
+    consoleBox.innerHTML = `[GO ACTION] Calcolo degli impatti attivato dall'utente.
+[CONFRONTO] Confrontati 27 articoli omogenei.
+[IMPATTO] Spesa base: € 2.951.500,00 | Netto: +€ 126.000,00 (+4,27% ponderato).
+[POLIMERI FOCUS] MAT-001 genera +€ 52.000,00 (41,27% dell'impatto netto).
+[POLICY] Generati 5 dossier di Negoziazione e 8 proposte di aggiornamento listino ERP.
+[HUMAN-IN-THE-LOOP] In attesa di approvazione dell'Operations Manager.`;
+
+    // Scroll morbido verso i KPI della Sezione 5
+    document.getElementById('rest-of-dashboard').scrollIntoView({ behavior: 'smooth' });
+  });
+
+  // Normalizzazione PKG-016
+  var btnFixPkg = document.getElementById('btn-fix-pkg');
+  var isFixed = false;
+  btnFixPkg.addEventListener('click', function(){
+    if(!isFixed){
+      document.getElementById('kpi-netto').textContent = "+124.000 €";
+      document.getElementById('kpi-netto-tag').textContent = "Ramo Opzionale (28 art.)";
+      document.getElementById('sum-impatto').textContent = "+124.000,00 €";
+      document.getElementById('kpi-pond').textContent = "4,20%";
+      document.getElementById('pkg-status-msg').style.display = 'block';
+      this.textContent = "Ripristina Baseline";
+      this.className = "bt";
+      appendLog("[USER ACTION] Confermato confezionamento 100 PZ per PKG-016. Ricalcolo completato: Netto = € 124.000.");
+      isFixed = true;
+    } else {
+      document.getElementById('kpi-netto').textContent = "+126.000 €";
+      document.getElementById('kpi-netto-tag').textContent = "Baseline ufficiale";
+      document.getElementById('sum-impatto').textContent = "+126.000,00 €";
+      document.getElementById('kpi-pond').textContent = "4,27%";
+      document.getElementById('pkg-status-msg').style.display = 'none';
+      this.textContent = "Normalizza a 100 PZ";
+      this.className = "bt g";
+      appendLog("[USER ACTION] Ripristinata baseline senza PKG-016. Netto = € 126.000.");
+      isFixed = false;
+    }
+  });
+
+  // Approva ERP
+  document.getElementById('btn-approve-erp').addEventListener('click', function(){
+    alert('Approvazione registrata! 8 prezzi aggiornati su ERP Sage X3 con decorrenza 01/01/2027.');
+    this.textContent = "Approvato (8)";
+    this.disabled = true;
+    this.style.opacity = "0.6";
+    appendLog("[APPROVAL] L'utente ha approvato le 8 proposte di aggiornamento listino ERP.");
+  });
+
+  // Esegui tutto
+  document.getElementById('btn-run-all').addEventListener('click', function(){
+    triggerFileUpload();
+    setTimeout(function(){
+      document.getElementById('btn-go').click();
+    }, 6000);
+  });
+
+  document.getElementById('btn-reset').addEventListener('click', function(){
+    location.reload();
+  });
+
+  function appendLog(msg){
+    var consoleBox = document.getElementById('console-log');
+    consoleBox.innerHTML += "<br>" + msg;
+    consoleBox.scrollTop = consoleBox.scrollHeight;
+  }
+})();
+</script>
+</body>
+</html>
