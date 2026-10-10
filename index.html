@@ -115,7 +115,7 @@ dialog::backdrop{background:rgba(20,20,20,.5)}
   <div class="stepper" id="stepper-bar">
     <div class="step-item active" id="st-1"><span class="step-check">✓</span> <span>1 Upload & parsing</span></div>
     <div class="step-item" id="st-2"><span class="step-check">✓</span> <span>2 Estrazione</span></div>
-    <div class="step-item" id="st-3"><span class="step-check">✓</span> <span>3 Dati ERP</span></div>
+    <div class="step-item" id="st-3"><span class="step-check">✓</span> <span>3 Confronta con ERP</span></div>
     <div class="step-item" id="st-4"><span class="step-check">✓</span> <span>4 Confronto</span></div>
     <div class="step-item" id="st-5"><span class="step-check">✓</span> <span>5 Impatto</span></div>
     <div class="step-item" id="st-6"><span class="step-check">✓</span> <span>6 Decisioni</span></div>
@@ -208,12 +208,19 @@ dialog::backdrop{background:rgba(20,20,20,.5)}
     </div>
 
   </div>
+
+  <!-- Pulsante Confronta con ERP (posizionato dopo 2-estrazione) -->
+  <div id="compare-erp-container" style="display:none;margin-top:14px;text-align:center;background:#F0F7F4;border:1px solid #00693C;padding:12px;border-radius:3px">
+    <button class="bt g" id="btn-compare-erp" style="height:36px;padding:0 24px;font-size:14px;font-weight:700">
+      Confronta con ERP
+    </button>
+  </div>
 </div>
 
-<!-- 3 - Dati ERP -->
+<!-- 3 - Confronta con ERP -->
 <div class="w" id="sec-3-erp">
   <div class="wt">
-    <h2>3 - Dati ERP <span style="font-size:12px;font-weight:normal;color:#666;margin-left:8px">ERP - Contesto aziendale</span></h2>
+    <h2>3 - Confronta con ERP <span style="font-size:12px;font-weight:normal;color:#666;margin-left:8px">ERP - Contesto aziendale</span></h2>
     <span class="ic">⚙</span>
   </div>
 
@@ -601,72 +608,76 @@ dialog::backdrop{background:rgba(20,20,20,.5)}
         return '<tr'+isAnom+'><td><code>'+r.cod+'</code></td><td>'+r.desc+'</td><td><b>'+r.udm+'</b></td><td class="n"><b>'+r.eur+' €</b></td></tr>';
       }).join('');
 
-      // Mostra le Note listino dello Step 2
+      // Mostra le Note listino dello Step 2 e il pulsante per confrontare con l'ERP
       document.getElementById('box-note-listino').style.display = 'block';
+      document.getElementById('compare-erp-container').style.display = 'block';
       document.getElementById('st-2').className = "step-item done";
-      document.getElementById('st-3').className = "step-item active";
-
-      // 3. MOSTRA LA SEZIONE 3 con LOADER INIZIALE
-      document.getElementById('sec-3-erp').style.display = 'block';
-      var tbodyErp = document.getElementById('tbl-erp');
-      tbodyErp.innerHTML = `
-        <tr>
-          <td colspan="8" style="text-align:center;color:#2B5675;padding:25px;font-weight:600;font-size:13px">
-            <span class="spinner"></span> Connessione DB ERP in corso... Avvio popolamento dati...
-          </td>
-        </tr>
-      `;
-
-      document.getElementById('sec-3-erp').scrollIntoView({ behavior: 'smooth' });
-
-      // 4. Inizia l'inserimento RIGA PER RIGA dei dati ERP + Listino
-      setTimeout(function(){
-        tbodyErp.innerHTML = ''; // Pulisce il loader
-        var rowIndex = 0;
-        var scrollBox = document.getElementById('scroll-erp-box');
-
-        var rowInterval = setInterval(function(){
-          if(rowIndex < combinedData.length){
-            var r = combinedData[rowIndex];
-            var rowStyle = '';
-            if(r.fam === 'Non trovato') rowStyle = ' background:#FDE8E8;color:#991B1B';
-            else if(r.codErp === 'PKG-016') rowStyle = ' background:#FBE0BD';
-
-            var tr = document.createElement('tr');
-            tr.className = 'row-animated';
-            if(rowStyle) tr.style.cssText = rowStyle;
-
-            tr.innerHTML = `
-              <td><code>${r.codErp}</code></td>
-              <td>${r.fam}</td>
-              <td><b>${r.udmErp}</b></td>
-              <td class="n"><b>${r.eurErp}${r.eurErp !== '—' ? ' €' : ''}</b></td>
-              <td class="n">${r.qta}</td>
-              <td style="border-left:2px solid #C9D0CC"><code>${r.codLst}</code></td>
-              <td><b>${r.udmLst}</b></td>
-              <td class="n"><b>${r.eurLst} €</b></td>
-            `;
-
-            tbodyErp.appendChild(tr);
-            scrollBox.scrollTop = scrollBox.scrollHeight; // Autoscroll
-            rowIndex++;
-          } else {
-            clearInterval(rowInterval);
-
-            // Mostra il pulsante GO e il box delle eccezioni al termine
-            document.getElementById('go-action-container').style.display = 'block';
-            document.getElementById('box-eccezioni-erp').style.display = 'block';
-
-            // Aggiorna lo Stepper al passo 3 e 4 completati
-            document.getElementById('st-3').className = "step-item done";
-            document.getElementById('st-4').className = "step-item done";
-          }
-        }, 80);
-
-      }, 800);
 
     }, 2500);
   }
+
+  // Event listener per il pulsante "Confronta con ERP" dopo la Sezione 2
+  document.getElementById('btn-compare-erp').addEventListener('click', function(){
+    document.getElementById('st-3').className = "step-item active";
+    document.getElementById('sec-3-erp').style.display = 'block';
+    
+    var tbodyErp = document.getElementById('tbl-erp');
+    tbodyErp.innerHTML = `
+      <tr>
+        <td colspan="8" style="text-align:center;color:#2B5675;padding:25px;font-weight:600;font-size:13px">
+          <span class="spinner"></span> Connessione DB ERP in corso... Avvio popolamento dati...
+        </td>
+      </tr>
+    `;
+
+    document.getElementById('sec-3-erp').scrollIntoView({ behavior: 'smooth' });
+
+    // Inizia l'inserimento RIGA PER RIGA dei dati ERP + Listino
+    setTimeout(function(){
+      tbodyErp.innerHTML = ''; // Pulisce il loader
+      var rowIndex = 0;
+      var scrollBox = document.getElementById('scroll-erp-box');
+
+      var rowInterval = setInterval(function(){
+        if(rowIndex < combinedData.length){
+          var r = combinedData[rowIndex];
+          var rowStyle = '';
+          if(r.fam === 'Non trovato') rowStyle = ' background:#FDE8E8;color:#991B1B';
+          else if(r.codErp === 'PKG-016') rowStyle = ' background:#FBE0BD';
+
+          var tr = document.createElement('tr');
+          tr.className = 'row-animated';
+          if(rowStyle) tr.style.cssText = rowStyle;
+
+          tr.innerHTML = `
+            <td><code>${r.codErp}</code></td>
+            <td>${r.fam}</td>
+            <td><b>${r.udmErp}</b></td>
+            <td class="n"><b>${r.eurErp}${r.eurErp !== '—' ? ' €' : ''}</b></td>
+            <td class="n">${r.qta}</td>
+            <td style="border-left:2px solid #C9D0CC"><code>${r.codLst}</code></td>
+            <td><b>${r.udmLst}</b></td>
+            <td class="n"><b>${r.eurLst} €</b></td>
+          `;
+
+          tbodyErp.appendChild(tr);
+          scrollBox.scrollTop = scrollBox.scrollHeight; // Autoscroll
+          rowIndex++;
+        } else {
+          clearInterval(rowInterval);
+
+          // Mostra il pulsante GO e il box delle eccezioni al termine
+          document.getElementById('go-action-container').style.display = 'block';
+          document.getElementById('box-eccezioni-erp').style.display = 'block';
+
+          // Aggiorna lo Stepper al passo 3 e 4 completati
+          document.getElementById('st-3').className = "step-item done";
+          document.getElementById('st-4').className = "step-item done";
+        }
+      }, 80);
+
+    }, 800);
+  });
 
   // GESTIONE PULSANTE "GO" (Pubblica il resto della dashboard e completa lo Stepper 5, 6 e 7)
   document.getElementById('btn-go').addEventListener('click', function(){
@@ -741,8 +752,11 @@ dialog::backdrop{background:rgba(20,20,20,.5)}
   document.getElementById('btn-run-all').addEventListener('click', function(){
     triggerFileUpload();
     setTimeout(function(){
+      document.getElementById('btn-compare-erp').click();
+    }, 3000);
+    setTimeout(function(){
       document.getElementById('btn-go').click();
-    }, 6000);
+    }, 7000);
   });
 
   document.getElementById('btn-reset').addEventListener('click', function(){
