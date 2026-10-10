@@ -88,6 +88,7 @@ dialog::backdrop{background:rgba(20,20,20,.5)}
 
 /* Sezioni a comparsa */
 #sec-3-erp{display:none}
+#btn-confronta-container{display:none}
 #go-action-container{display:none}
 #rest-of-dashboard{display:none}
 </style>
@@ -95,7 +96,7 @@ dialog::backdrop{background:rgba(20,20,20,.5)}
 <body>
 
 <div style="background:#1B1B1B;color:#fff;height:42px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;font-size:12.5px;font-weight:600;gap:12px;overflow:hidden">
-<div style="display:flex;gap:22px;align-items:center"><span style="color:#00D639;font-size:26px;font-weight:700;letter-spacing:-.5px">Formula AI - Agentic Flow</span><b style="font-size:16px">_</b></div>
+<div style="display:flex;gap:22px;align-items:center"><span style="color:#FED100;font-size:18px;font-weight:700;letter-spacing:-.2px">Formula AI - Agentic Flow</span><b style="font-size:16px;color:#FED100"></b></div>
 <div style="display:flex;gap:24px;white-space:nowrap"><span>Operations Manager</span><span>[Utente]</span><span>[Cartella POC Amaltia]</span></div>
 </div>
 
@@ -208,13 +209,16 @@ dialog::backdrop{background:rgba(20,20,20,.5)}
     </div>
 
   </div>
+</div>
 
-  <!-- Pulsante Confronta con ERP (posizionato dopo 2-estrazione) -->
-  <div id="compare-erp-container" style="display:none;margin-top:14px;text-align:center;background:#F0F7F4;border:1px solid #00693C;padding:12px;border-radius:3px">
-    <button class="bt g" id="btn-compare-erp" style="height:36px;padding:0 24px;font-size:14px;font-weight:700">
-      Confronta con ERP
-    </button>
+<!-- Pulsante "Confronta con ERP" (Attiva Sezione 3) -->
+<div class="w" id="btn-confronta-container" style="text-align:center;background:#F0F7F4;border:1px solid #00693C;padding:16px">
+  <div style="font-size:14px;font-weight:600;color:#2B5675;margin-bottom:8px">
+    Estrazione completata con successo. Clicca sul pulsante per avviare l'abbinamento e il confronto con i dati ERP.
   </div>
+  <button class="bt g" id="btn-confronta-erp" style="height:40px;padding:0 30px;font-size:15px;font-weight:700;letter-spacing:0.5px">
+    🔄 Confronta con ERP
+  </button>
 </div>
 
 <!-- 3 - Confronta con ERP -->
@@ -433,7 +437,6 @@ dialog::backdrop{background:rgba(20,20,20,.5)}
 
 </div>
 
-<!-- Dialog / Modal Bozza Comunicazioni -->
 <dialog id="dlg-comm">
   <div class="dh2">
     <h2 id="dlg-title">Bozza Comunicazione Agente</h2>
@@ -556,6 +559,22 @@ dialog::backdrop{background:rgba(20,20,20,.5)}
     dlg.close();
   });
 
+  // Gestione Copy su Modale
+  var btnCopy = document.getElementById('btn-copy');
+  if (btnCopy) {
+    btnCopy.addEventListener('click', function(){
+      var textToCopy = "Oggetto: " + dlgSubject.textContent + "\n\n" + dlgBody.textContent;
+      var tempTextArea = document.createElement("textarea");
+      tempTextArea.value = textToCopy;
+      document.body.appendChild(tempTextArea);
+      tempTextArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempTextArea);
+      btnCopy.textContent = "Copiato!";
+      setTimeout(function(){ btnCopy.textContent = "Copia Testo"; }, 2000);
+    });
+  }
+
   // Gestione Drop Zone & File Input Click
   var dropZone = document.getElementById('drop-zone');
   var fileInput = document.getElementById('file-input');
@@ -608,19 +627,30 @@ dialog::backdrop{background:rgba(20,20,20,.5)}
         return '<tr'+isAnom+'><td><code>'+r.cod+'</code></td><td>'+r.desc+'</td><td><b>'+r.udm+'</b></td><td class="n"><b>'+r.eur+' €</b></td></tr>';
       }).join('');
 
-      // Mostra le Note listino dello Step 2 e il pulsante per confrontare con l'ERP
+      // Mostra le Note listino dello Step 2
       document.getElementById('box-note-listino').style.display = 'block';
-      document.getElementById('compare-erp-container').style.display = 'block';
       document.getElementById('st-2').className = "step-item done";
+      document.getElementById('st-3').className = "step-item active";
+
+      // Mostra il pulsante "Confronta con ERP"
+      document.getElementById('btn-confronta-container').style.display = 'block';
 
     }, 2500);
   }
 
-  // Event listener per il pulsante "Confronta con ERP" dopo la Sezione 2
-  document.getElementById('btn-compare-erp').addEventListener('click', function(){
-    document.getElementById('st-3').className = "step-item active";
+  // GESTIONE PULSANTE "Confronta con ERP" (Attiva e mostra Sezione 3)
+  var erpLoaded = false;
+  document.getElementById('btn-confronta-erp').addEventListener('click', function(){
+    if(erpLoaded) return;
+    erpLoaded = true;
+
+    // Disabilita pulsante "Confronta con ERP"
+    this.disabled = true;
+    this.style.opacity = "0.6";
+    this.innerHTML = "✅ Confronto con ERP attivato";
+
+    // MOSTRA LA SEZIONE 3 con LOADER INIZIALE
     document.getElementById('sec-3-erp').style.display = 'block';
-    
     var tbodyErp = document.getElementById('tbl-erp');
     tbodyErp.innerHTML = `
       <tr>
@@ -741,7 +771,7 @@ dialog::backdrop{background:rgba(20,20,20,.5)}
 
   // Approva ERP
   document.getElementById('btn-approve-erp').addEventListener('click', function(){
-    alert('Approvazione registrata! 8 prezzi aggiornati su ERP __ X3 con decorrenza 01/01/2027.');
+    alert('Approvazione registrata! 8 prezzi aggiornati su ERP con decorrenza 01/01/2027.');
     this.textContent = "Approvato (8)";
     this.disabled = true;
     this.style.opacity = "0.6";
@@ -752,11 +782,11 @@ dialog::backdrop{background:rgba(20,20,20,.5)}
   document.getElementById('btn-run-all').addEventListener('click', function(){
     triggerFileUpload();
     setTimeout(function(){
-      document.getElementById('btn-compare-erp').click();
-    }, 3000);
-    setTimeout(function(){
-      document.getElementById('btn-go').click();
-    }, 7000);
+      document.getElementById('btn-confronta-erp').click();
+      setTimeout(function(){
+        document.getElementById('btn-go').click();
+      }, 3000);
+    }, 2800);
   });
 
   document.getElementById('btn-reset').addEventListener('click', function(){
